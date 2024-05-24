@@ -1,0 +1,84 @@
+NAME: mraspringboot
+LAST DEPLOYED: Thu Mar 28 14:31:18 2024
+NAMESPACE: mra_environment
+STATUS: pending-install
+REVISION: 1
+TEST SUITE: None
+HOOKS:
+MANIFEST:
+---
+# Source: mraspringboot/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mraspringboot
+  labels:
+    helm.sh/chart: mraspringboot-0.1.0
+    app.kubernetes.io/name: mraspringboot
+    app.kubernetes.io/instance: mraspringboot
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: mraspringboot
+    app.kubernetes.io/instance: mraspringboot
+---
+# Source: mraspringboot/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mraspringboot
+  labels:
+    helm.sh/chart: mraspringboot-0.1.0
+    app.kubernetes.io/name: mraspringboot
+    app.kubernetes.io/instance: mraspringboot
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mraspringboot
+      app.kubernetes.io/instance: mraspringboot
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: mraspringboot-0.1.0
+        app.kubernetes.io/name: mraspringboot
+        app.kubernetes.io/instance: mraspringboot
+        app.kubernetes.io/version: "1.16.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      imagePullSecrets:
+        - name: mrasecret
+      containers:
+        - name: mraspringboot
+          image: "artifactory.hhscie.txaccess.net/hhsc-docker-dev/mra-sprintboot:latest"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /                                                                
+              port: 8080
+          resources:
+            {}
+
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace mra_environment -l "app.kubernetes.io/name=mraspringboot,app.kubernetes.io/instance=mraspringboot" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace mra_environment $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace mra_environment port-forward $POD_NAME 8080:$CONTAINER_PORT

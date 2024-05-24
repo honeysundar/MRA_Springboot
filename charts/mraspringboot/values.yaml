@@ -1,0 +1,23 @@
+replicaCount: 1
+
+image:
+  repository: artifactory.hhscie.txaccess.net/hhsc-docker-dev/mra-sprintboot
+  pullPolicy: Always
+  tag: "latest"
+
+service:
+  name: mraspringboot
+  type: ClusterIP
+  port: 8080
+  internalPort: 8080
+
+ingress:
+  enabled: false
+  hosts:
+    - host: chart-example.local
+  tls: []
+
+imagePullSecrets:
+  name: mrasecret
+
+resources: {}

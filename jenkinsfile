@@ -1,0 +1,60 @@
+pipeline {
+     agent {
+        label 'OCNODE'
+    }
+    parameters {
+        string(name: 'NAMESPACE', defaultValue: 'mraenvironment', description: 'Kubernetes namespace to deploy application')
+    }
+     environment {
+        JAVA_HOME = '/opt/jenkins/jdk-17.0.8'
+        IMAGE_NAME = 'mra-sprintboot'
+        IMAGE_TAG = 'latest'
+        ARTIFACTORY_HOST = 'artifactory.hhscie.txaccess.net'
+        ARTIFACTORY_REPO_FOLDER = 'hhsc-docker-dev'
+        REGISTRY_USERNAME = ''
+        REGISTRY_PASSWORD = ''
+     }
+
+    stages {
+        stage('Build Jar File ') {
+            steps {
+                println "Building JAR file..."
+                sh'''
+                    # Using Maven Wrapper, without installing maven in local.
+                    chmod +x mvnw
+                    ./mvnw package -DskipTests
+                    echo "JAR file created." 
+                '''
+            }
+        }
+        
+        stage('Build ContainerImage and push to jfrog ') {
+            steps {
+                println "BUild image and pushing to Artifactory..."
+                withCredentials([usernamePassword(credentialsId: 'artifactory_hhscie_podman', usernameVariable: 'REGISTRY_USERNAME', passwordVariable: 'REGISTRY_PASSWORD')]) {
+                    sh '''
+                        echo $REGISTRY_PASSWORD | sudo podman login --username $REGISTRY_USERNAME --password-stdin artifactory.hhscie.txaccess.net
+                        sudo podman build -t ${IMAGE_NAME} .
+                        sudo podman tag ${IMAGE_NAME}:${IMAGE_TAG} ${ARTIFACTORY_HOST}/${ARTIFACTORY_REPO_FOLDER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        sudo podman push ${ARTIFACTORY_HOST}/${ARTIFACTORY_REPO_FOLDER}/${IMAGE_NAME}:${IMAGE_TAG}
+                    '''
+                }
+                println "Image pushed to artifactory."
+            }
+        }
+        stage('Deploy') {
+            steps {
+                withKubeConfig([credentialsId: "kubeconfig_rke2",
+                                namespace: "${params.NAMESPACE}"
+                                ]) {
+                    withEnv(["NAMESPACE=${params.NAMESPACE}"]) {
+                        sh '''
+                            cd $WORKSPACE/charts
+                            helm upgrade --install mraspringboot mraspringboot -n $NAMESPACE --create-namespace
+                        '''
+                    }
+                }
+            }
+        }
+    }
+}
