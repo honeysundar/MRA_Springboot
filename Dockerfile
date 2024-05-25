@@ -1,4 +1,4 @@
-FROM artifactory.hhscie.txaccess.net/hhsc-docker-dev/openjdk:17
+FROM openjdk:23-oraclelinux9
 
 WORKDIR /app
 
